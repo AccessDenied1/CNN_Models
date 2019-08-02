@@ -197,7 +197,7 @@ test_datagen= ImageDataGenerator()
 
 train_generator = train_datagen.flow_from_directory(
 
-    directory='Dataset_cadla/Legumes/Train' ,	#Give the path of the folder contaning Train data
+    directory='Dataset/Train/Labels' ,	#Give the path of the folder contaning Train data
 
     target_size=(224, 224),
 
@@ -216,7 +216,7 @@ valid_datagen= ImageDataGenerator()
 
 valid_generator = valid_datagen.flow_from_directory(
 
-    directory="Dataset_cadla/Legumes/Valid",	#Give the path of the folder contaning Valid data
+    directory='Dataset/Train/Labels',	#Give the path of the folder contaning Valid data
 
     target_size=(224, 224),
 
@@ -232,7 +232,7 @@ valid_generator = valid_datagen.flow_from_directory(
 
 test_generator= test_datagen.flow_from_directory(
 
-   directory="Dataset_cadla/Legumes/Test",	#Give the path of the folder contaning Test data
+   directory='Dataset/Train/Labels',	#Give the path of the folder contaning Test data
 
    target_size=(224,224),color_mode="rgb",
 
@@ -256,8 +256,8 @@ x = GlobalAveragePooling2D(name='avg_pool')(x)
 x = Dense(256, activation='relu')(x)
 
 x= Dropout(0.5)(x)
-
-predictions = Dense(7, activation='softmax')(x)
+classes = 7
+predictions = Dense(classes, activation='softmax')(x)
 
 model = Model(inputs=base_model.input, outputs=predictions)
 
@@ -273,14 +273,14 @@ model.compile(optimizer='adam',
 
 print(model.summary())
 #give the path to save the model
-cb = keras.callbacks.ModelCheckpoint("/content/drive/My Drive/SqueezeNets/SqueezeNets_some_epochs.model", monitor='val_acc', verbose=0, save_best_only=True, save_weights_only=False, mode='auto', period=1)
+cb = keras.callbacks.ModelCheckpoint("path/to/save/model", monitor='val_acc', verbose=0, save_best_only=True, save_weights_only=False, mode='auto', period=1)
 model.fit_generator(generator=train_generator,validation_data=valid_generator,validation_steps=STEP_SIZE_VALID,steps_per_epoch=STEP_SIZE_TRAIN,epochs=100,callbacks = [cb])
 
 
 
 model.evaluate_generator(test_generator,steps = STEP_SIZE_TEST, max_queue_size=10, workers=1, use_multiprocessing=False, verbose=0)
 
-
+"This is for deployment purpose (especially for Raspberry-pi)
 """##Converting to TfLite"""
 
 import tensorflow as tf
@@ -289,12 +289,12 @@ converter  = tf.lite.TFLiteConverter.from_keras_model_file("/content/drive/My Dr
 
 tflite_model  = converter.convert()
 
-open("/content/drive/My Drive/SqueezeNets/SqueezeNets_some_epochs.tflite", "wb").write(tflite_model)
+open("path/of/saved/model", "wb").write(tflite_model)
 
 """##Getting the f-1 scores"""
 
 import os
-validation_data_dir = "/content/drive/My Drive/Dataset_cadla/Legumes/Test"
+validation_data_dir = "path/of/saved/model"
 import glob
 allvalidimgpaths=glob.glob(os.path.join(validation_data_dir, '*/*.jpeg'))
 allvalidimgpaths+=glob.glob(os.path.join(validation_data_dir, '*/*.jpg'))
@@ -313,14 +313,14 @@ print(np.shape(validation_imgs))
 
 from sklearn.preprocessing import LabelEncoder
 le = LabelEncoder()
-le.fit(["black eyed beans","chana dal","kidney beans","masoor dal","moong dal","toor dal","urad dal"])
+le.fit(["label_1","label_2","label_3","label_4","label_5","label_6","label_7"])
 validation_labels_enc = le.transform(validation_labels)
 
 print(validation_labels[5:9])
 print(validation_labels_enc[5:9])
 
 from keras.models import load_model
-model = load_model("/content/drive/My Drive/SqueezeNets/SqueezeNets_some_epochs.model")
+model = load_model("path/of/saved/model")
 
 import numpy
 newvalids=validation_imgs[:]
@@ -339,6 +339,6 @@ newpreds= np.argmax(test_predictions,axis=1)
 
 from sklearn.metrics import classification_report
 
-print(classification_report(validation_labels_enc, newpreds, target_names=["black eyed beans","chana dal","kidney beans","masoor dal","moong dal","toor dal","urad dal"]))
+print(classification_report(validation_labels_enc, newpreds, target_names=["label_1","label_2","label_3","label_4","label_5","label_6","label_7"]))
 
 
